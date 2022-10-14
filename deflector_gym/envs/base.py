@@ -22,9 +22,9 @@ class DeflectorBase(gym.Env):
         self.desired_angle = desired_angle
         self.eff = None  # uninitialized
 
-    def initialize_struct(self):
+    def initialize_struct(self, *args, **kwargs):
         # default initialization is genetic algorithm(ga)
-        return ga_init()
+        return ga_init(*args, **kwargs)
 
     def get_efficiency(self, struct: np.array) -> float:
         raise NotImplementedError
