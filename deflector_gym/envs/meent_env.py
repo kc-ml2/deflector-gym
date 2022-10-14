@@ -54,6 +54,7 @@ class MeentIndexEnv(MeentBase):
         )
         self.action_space = gym.spaces.Discrete(n_cells)
 
+
 class MeentDirectionEnv(MeentBase):
     def __init__(
             self,
