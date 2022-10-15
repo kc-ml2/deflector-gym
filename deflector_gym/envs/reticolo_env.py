@@ -37,7 +37,7 @@ class MatlabBase(DeflectorBase):
 
     def get_efficiency(self, struct: np.array):
         return self.eng.Eval_Eff_1D(
-            matlab.double(struct),
+            matlab.double(struct.tolist()),
             self.wavelength_mtl,
             self.desired_angle_mtl
         )
