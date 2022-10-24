@@ -1,5 +1,5 @@
 import gym
-
+import numpy as np
 
 class BestRecorder(gym.Wrapper):
     def __init__(self, env):
@@ -21,3 +21,25 @@ class BestRecorder(gym.Wrapper):
         self.best = (self.eff, self.struct)
 
         return ret
+
+class ExpandObservation(gym.Wrapper):
+    def __init__(self, env):
+        super(ExpandObservation, self).__init__(env)
+        obs_space = self.observation_space
+        self.observation_space = gym.spaces.Box(
+            low=obs_space.low, high=obs_space.high,
+            shape=(1, *obs_space.shape),
+            dtype=np.float64
+        )
+
+    def step(self, action):
+        obs, rew, done, info = super(ExpandObservation, self).step(action)
+        obs = obs.reshape(1, -1)
+
+        return obs, rew, done, info
+
+    def reset(self, **kwargs):
+        obs = super(ExpandObservation, self).reset()
+        obs = obs.reshape(1, -1)
+
+        return obs

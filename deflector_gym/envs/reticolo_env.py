@@ -6,7 +6,7 @@ import gym
 import numpy as np
 
 from .base import DeflectorBase
-from .constants import Direction1d
+from .actions import Action1D2
 
 try:
     import matlab.engine
@@ -16,8 +16,8 @@ except:
         'try installing pip install matlabengine=={YOUR MATLAB VERSION}'
     )
 
-RETICOLO_MATLAB = os.path.join(Path().absolute().parent, 'third_party/reticolo_allege')
-SOLVER_MATLAB = os.path.join(Path().absolute().parent, 'third_party/solvers')
+RETICOLO_MATLAB = os.path.join(Path(__file__).parent.parent.parent.absolute(), 'third_party/reticolo_allege')
+SOLVER_MATLAB = os.path.join(Path(__file__).parent.parent.parent.absolute(), 'third_party/solvers')
 
 
 class MatlabBase(DeflectorBase):
@@ -42,8 +42,15 @@ class MatlabBase(DeflectorBase):
             self.desired_angle_mtl
         )
 
+    def close(self):
+        # recommend to close env when done
+        self.eng.quite()
 
-class ReticoloIndexEnv(MatlabBase):
+class ReticoloIndex(MatlabBase):
+    """
+    legacy env for compatibility with chaejin's UNet
+    will move to meent later on
+    """
     def __init__(
             self,
             n_cells=256,
@@ -61,54 +68,20 @@ class ReticoloIndexEnv(MatlabBase):
         )
         self.action_space = gym.spaces.Discrete(n_cells)
 
-class ReticoloDirectionEnv(MatlabBase):
-    def __init__(
-            self,
-            n_cells=256,
-            wavelength=1100,
-            desired_angle=70,
-            initial_pos='random',  # initial agent's position
-            *args,
-            **kwargs
-    ):
-        super().__init__(n_cells, wavelength, desired_angle)
-
-        self.observation_space = gym.spaces.Box(
-            low=-1., high=1.,
-            shape=(1, n_cells,),
-            dtype=np.float64
-        )
-        self.action_space = gym.spaces.Discrete(len(Direction1d))
-        self.initial_pos = initial_pos
-
     def reset(self):
-        # initialize structure
-        super().reset()
+        self.struct = self.initialize_struct()
+        self.eff = self.get_efficiency(self.struct)
 
-        # initialize agent
-        if self.initial_pos == 'center':
-            self.pos = self.n_cells // 2
-        elif self.initial_pos == 'right_edge':
-            self.pos = self.n_cells - 1
-        elif self.initial_pos == 'left_edge':
-            self.pos = 0
-        elif self.initial_pos == 'random':
-            self.pos = np.random.randint(self.n_cells)
-        else:
-            raise RuntimeError('Undefined inital position')
+        return self.struct[np.newaxis, :]  # for 1 channel
 
-        return self.struct[np.newaxis, :]
-
-    def step(self, ac):
+    def step(self, action):
         prev_eff = self.eff
-        # left == -1, noop == 0, right == 1
-        # this way we can directly use ac as index difference
-        ac -= 1
-        self.struct = self.flip(self.struct, self.pos + ac)
+
+        self.struct = self.flip(self.struct, action)
         self.eff = self.get_efficiency(self.struct)
 
         reward = self.eff - prev_eff
 
+        # unsqueeze for 1 channel
         return self.struct[np.newaxis, :], reward, False, {}
 
-# ReticoloDirectionEnv = partial(DirectionEnv, base=MatlabBase)

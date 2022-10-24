@@ -7,24 +7,23 @@ def make(*args, **kwargs):
 try:
     register(
         id='ReticoloIndex-v0',
-        entry_point='deflector_gym.envs.reticolo_env:ReticoloIndexEnv',
-    )
-
-    register(
-        id='ReticoloDirection-v0',
-        entry_point='deflector_gym.envs.reticolo_env:ReticoloDirectionEnv',
+        entry_point='deflector_gym.envs.reticolo_env:ReticoloIndex',
     )
 except Exception as e:
     raise Warning(f'Reticolo environments not available\n{e}')
 
 register(
     id='MeentIndex-v0',
-    entry_point='deflector_gym.envs.meent_env:MeentIndexEnv',
+    entry_point='deflector_gym.envs.meent_env:MeentIndex',
 )
 
 register(
-    id='MeentDirection-v0',
-    entry_point='deflector_gym.envs.meent_env:MeentDirectionEnv'
+    id='MeentAction1D2-v0',
+    entry_point='deflector_gym.envs.meent_env:MeentAction1D2'
 )
 
+register(
+    id='MeentAction1D4-v0',
+    entry_point='deflector_gym.envs.meent_env:MeentAction1D4'
+)
 

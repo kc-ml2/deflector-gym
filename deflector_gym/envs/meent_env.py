@@ -5,7 +5,7 @@ import numpy as np
 
 from JLAB.solver import JLABCode
 from .base import DeflectorBase
-from .constants import Direction1d
+from .actions import Action1D2, Action1D4
 
 
 class MeentBase(DeflectorBase):
@@ -36,7 +36,7 @@ class MeentBase(DeflectorBase):
         return eff
 
 
-class MeentIndexEnv(MeentBase):
+class MeentIndex(MeentBase):
     def __init__(
             self,
             n_cells=256,
@@ -49,19 +49,53 @@ class MeentIndexEnv(MeentBase):
 
         self.observation_space = gym.spaces.Box(
             low=-1., high=1.,
-            shape=(1, n_cells,),
+            shape=(n_cells,),
             dtype=np.float64
         )
         self.action_space = gym.spaces.Discrete(n_cells)
 
+    def reset(self):
+        self.struct = self.initialize_struct()
+        self.eff = self.get_efficiency(self.struct)
 
-class MeentDirectionEnv(MeentBase):
+        return self.struct  # for 1 channel
+
+    def step(self, action):
+        # TODO: define done condition
+        prev_eff = self.eff
+
+        self.struct = self.flip(self.struct, action)
+        self.eff = self.get_efficiency(self.struct)
+
+        reward = self.eff - prev_eff
+
+        # unsqueeze for 1 channel
+        return self.struct, reward, False, {}
+
+
+def initialize_agent(initial_pos, n_cells):
+    # initialize agent
+    if initial_pos == 'center':
+        pos = n_cells // 2
+    elif initial_pos == 'right_edge':
+        pos = n_cells - 1
+    elif initial_pos == 'left_edge':
+        pos = 0
+    elif initial_pos == 'random':
+        pos = np.random.randint(n_cells)
+    else:
+        raise RuntimeError('Undefined inital position')
+
+    return pos
+
+
+class MeentAction1D2(MeentBase):
     def __init__(
             self,
             n_cells=256,
             wavelength=1100,
             desired_angle=70,
-            initial_pos='random',  # initial agent's position
+            initial_pos='center',  # initial agent's position
             *args,
             **kwargs
     ):
@@ -69,29 +103,21 @@ class MeentDirectionEnv(MeentBase):
 
         self.observation_space = gym.spaces.Box(
             low=-1., high=1.,
-            shape=(1, n_cells,),
+            shape=(2*n_cells,),
             dtype=np.float64
         )
-        self.action_space = gym.spaces.Discrete(len(Direction1d))
+        self.action_space = gym.spaces.Discrete(len(Action1D2)) # start=-1
         self.initial_pos = initial_pos
+        self.onehot = np.eye(n_cells)
 
     def reset(self):
         # initialize structure
-        super().reset()
 
-        # initialize agent
-        if self.initial_pos == 'center':
-            self.pos = self.n_cells // 2
-        elif self.initial_pos == 'right_edge':
-            self.pos = self.n_cells - 1
-        elif self.initial_pos == 'left_edge':
-            self.pos = 0
-        elif self.initial_pos == 'random':
-            self.pos = np.random.randint(self.n_cells)
-        else:
-            raise RuntimeError('Undefined inital position')
+        self.struct = self.initialize_struct()
+        self.eff = self.get_efficiency(self.struct)
+        self.pos = initialize_agent(self.initial_pos, self.n_cells)
 
-        return self.struct[np.newaxis, :]
+        return np.concatenate((self.struct, self.onehot[self.pos]))
 
     def step(self, ac):
         prev_eff = self.eff
@@ -103,6 +129,56 @@ class MeentDirectionEnv(MeentBase):
 
         reward = self.eff - prev_eff
 
-        return self.struct[np.newaxis, :], reward, False, {}
+        return np.concatenate((self.struct, self.onehot[self.pos])), reward, False, {}
 
-# ReticoloDirectionEnv = partial(DirectionEnv, base=MeentBase)
+class MeentAction1D4(MeentBase):
+    def __init__(
+            self,
+            n_cells=256,
+            wavelength=1100,
+            desired_angle=70,
+            initial_pos='center',  # initial agent's position
+            *args,
+            **kwargs
+    ):
+        super().__init__(n_cells, wavelength, desired_angle)
+
+        self.observation_space = gym.spaces.Box(
+            low=-1., high=1.,
+            shape=(2*n_cells,),
+            dtype=np.float64
+        )
+        self.action_space = gym.spaces.Discrete(len(Action1D4))
+        self.initial_pos = initial_pos
+        self.onehot = np.eye(n_cells)
+
+    def reset(self):
+        # initialize structure
+
+        self.struct = self.initialize_struct(n_cells=self.n_cells)
+        self.eff = self.get_efficiency(self.struct)
+        self.pos = initialize_agent(self.initial_pos, self.n_cells)
+
+        return np.concatenate((self.struct, self.onehot[self.pos]))
+
+    def step(self, ac):
+        prev_eff = self.eff
+
+        if ac == Action1D4.RIGHT_SI.value and self.pos + 1 < self.n_cells:
+            self.pos += 1
+            self.struct[self.pos] = 1
+        elif ac == Action1D4.RIGHT_AIR.value and self.pos + 1 < self.n_cells:
+            self.pos += 1
+            self.struct[self.pos] = -1
+        elif ac == Action1D4.LEFT_SI.value and 0 <= self.pos - 1:
+            self.pos -= 1
+            self.struct[self.pos] = 1
+        elif ac == Action1D4.LEFT_AIR.value and 0 <= self.pos - 1:
+            self.pos -= 1
+            self.struct[self.pos] = -1
+
+        self.eff = self.get_efficiency(self.struct)
+
+        reward = self.eff - prev_eff
+
+        return np.concatenate((self.struct, self.onehot[self.pos])), reward, False, {}

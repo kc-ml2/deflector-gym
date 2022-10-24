@@ -20,6 +20,7 @@ class DeflectorBase(gym.Env):
         self.n_cells = n_cells
         self.wavelength = wavelength
         self.desired_angle = desired_angle
+        self.struct = None
         self.eff = None  # uninitialized
 
     def initialize_struct(self, *args, **kwargs):
@@ -38,28 +39,3 @@ class DeflectorBase(gym.Env):
             pass
 
         return struct
-
-    def reset(self):  # initializing the env
-        """
-        usual routine
-        """
-
-        self.struct = self.initialize_struct()
-        self.eff = self.get_efficiency(self.struct)
-
-        return self.struct[np.newaxis, :]  # for 1 channel
-
-    def step(self, action):
-        """
-        usual routine
-        """
-        # TODO: define done condition
-        prev_eff = self.eff
-
-        self.struct = self.flip(self.struct, action)
-        self.eff = self.get_efficiency(self.struct)
-
-        reward = self.eff - prev_eff
-
-        # unsqueeze for 1 channel
-        return self.struct[np.newaxis, :], reward, False, {}
