@@ -13,22 +13,24 @@ class MeentBase(DeflectorBase):
             self,
             n_cells=256,
             wavelength=1100,
-            desired_angle=70
+            desired_angle=70,
+            order=40,
+            thickness=325,
     ):
-        super().__init__(n_cells, wavelength, desired_angle)
+        super().__init__(n_cells, wavelength, desired_angle, order, thickness)
 
     def get_efficiency(self, struct):
         # struct [1, -1, 1, 1, ...]
         struct = struct[np.newaxis, np.newaxis, :]
 
-        wls = np.array([1100])
+        wls = np.array([self.wavelength])
         period = abs(wls / np.sin(self.desired_angle / 180 * np.pi))
         calc = JLABCode(
             grating_type=0,
             n_I=1.45, n_II=1., theta=0, phi=0.,
-            fourier_order=40, period=period,
+            fourier_order=self.order, period=period,
             wls=wls, pol=1,
-            patterns=None, ucell=struct, thickness=np.array([325])
+            patterns=None, ucell=struct, thickness=np.array([self.thickness])
         )
 
         eff, _, _ = calc.reproduce_acs_cell('p_si__real', 1)

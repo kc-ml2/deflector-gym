@@ -15,8 +15,12 @@ class DeflectorBase(gym.Env):
             self,
             n_cells=256,
             wavelength=1100,
-            desired_angle=70
+            desired_angle=70,
+            order=40,
+            thickness=325,
     ):
+        self.thickness = thickness
+        self.order = order
         self.n_cells = n_cells
         self.wavelength = wavelength
         self.desired_angle = desired_angle
