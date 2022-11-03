@@ -26,7 +26,7 @@ class DummyEnv(gym.Env):
         pass
 
 
-def ga_init(n_cells=256, mfs=30, mu=0) -> np.array:
+def random_bunch_init(n_cells=256, mfs=30, mu=0) -> np.array:
     """Genetic Algorithm
     TODO: explain detail
     """
@@ -42,5 +42,3 @@ def ga_init(n_cells=256, mfs=30, mu=0) -> np.array:
         i = temp + 1
 
     return np.array(img)
-
-

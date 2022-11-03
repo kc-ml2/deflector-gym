@@ -1,7 +1,7 @@
 import numpy as np
 import gym
 
-from .utils import ga_init
+from .utils import random_bunch_init
 
 
 class DeflectorBase(gym.Env):
@@ -29,7 +29,7 @@ class DeflectorBase(gym.Env):
 
     def initialize_struct(self, *args, **kwargs):
         # default initialization is genetic algorithm(ga)
-        return ga_init(*args, **kwargs)
+        return random_bunch_init(*args, **kwargs)
 
     def get_efficiency(self, struct: np.array) -> float:
         raise NotImplementedError
