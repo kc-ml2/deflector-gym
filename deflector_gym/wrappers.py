@@ -27,7 +27,7 @@ class ExpandObservation(gym.Wrapper):
         super(ExpandObservation, self).__init__(env)
         obs_space = self.observation_space
         self.observation_space = gym.spaces.Box(
-            low=obs_space.low, high=obs_space.high,
+            low=obs_space.low[0], high=obs_space.high[0],
             shape=(1, *obs_space.shape),
             dtype=np.float64
         )

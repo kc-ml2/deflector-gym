@@ -47,11 +47,11 @@ class MeentIndex(MeentBase):
             *args,
             **kwargs
     ):
-        super().__init__(n_cells, wavelength, desired_angle)
+        super().__init__(n_cells, wavelength, desired_angle, *args, **kwargs)
 
         self.observation_space = gym.spaces.Box(
             low=-1., high=1.,
-            shape=(n_cells,),
+            shape=(n_cells,), #### TODO fix shape
             dtype=np.float64
         )
         self.action_space = gym.spaces.Discrete(n_cells)
