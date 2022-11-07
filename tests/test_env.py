@@ -7,3 +7,7 @@ def test_instantiation():
     print(env.reset())
     env = deflector_gym.make('ReticoloIndex-v0')
     print(env.reset())
+
+
+if __name__ == '__main__':
+    test_instantiation()

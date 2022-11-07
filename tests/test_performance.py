@@ -12,3 +12,7 @@ def test_fps():
         m_env.step(m_env.action_space.sample())
 
     print(f'FPS: {N/(time.time() - s):0.3f}')
+
+
+if __name__ == '__main__':
+    test_fps()
