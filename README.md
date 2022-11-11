@@ -13,4 +13,9 @@ for step in range(10):
   env.step(env.action_space.sample())
 ```
 
-TODO: maybe optics-gym?
+## Test
+In project root directory, run
+```shell
+pytest
+```
+TODO: maybe rename as optics-gym?
