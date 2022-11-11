@@ -10,6 +10,7 @@ setup(
     install_requires=[
         'gym<0.25',
         'meent==0.3.8',
+        'tqdm',
     ],
     python_requires='>=3.8'
 )
