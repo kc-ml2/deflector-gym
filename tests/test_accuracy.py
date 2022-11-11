@@ -17,7 +17,3 @@ def test_compare_random_structure():
 
         np.testing.assert_almost_equal(m_eff, r_eff)
     r_eff.close()
-
-
-if __name__ == '__main__':
-    test_compare_random_structure()
