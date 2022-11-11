@@ -18,4 +18,6 @@ In project root directory, run
 ```shell
 pytest
 ```
-TODO: maybe rename as optics-gym?
+TODO: 
+* maybe rename as optics-gym?
+* gym's API changes too often, how to deal with that?
