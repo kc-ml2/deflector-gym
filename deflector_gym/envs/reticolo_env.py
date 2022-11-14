@@ -63,7 +63,7 @@ class ReticoloIndex(MatlabBase):
 
         self.observation_space = gym.spaces.Box(
             low=-1., high=1.,
-            shape=(1, n_cells,),
+            shape=(n_cells,),
             dtype=np.float64
         )
         self.action_space = gym.spaces.Discrete(n_cells)
@@ -72,7 +72,7 @@ class ReticoloIndex(MatlabBase):
         self.struct = self.initialize_struct()
         self.eff = self.get_efficiency(self.struct)
 
-        return self.struct[np.newaxis, :]  # for 1 channel
+        return self.struct  # for 1 channel
 
     def step(self, action):
         prev_eff = self.eff
@@ -83,5 +83,5 @@ class ReticoloIndex(MatlabBase):
         reward = self.eff - prev_eff
 
         # unsqueeze for 1 channel
-        return self.struct[np.newaxis, :], reward, False, {}
+        return self.struct, reward, False, {}
 
