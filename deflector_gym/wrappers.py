@@ -11,14 +11,14 @@ class BestRecorder(gym.Wrapper):
         ret = super().step(action)
 
         if self.eff > self.best[0]:
-            self.best = (self.eff, self.struct)
+            self.best = (self.eff, self.struct.copy())
 
         return ret
 
     def reset(self, *args, **kwargs):
         ret = super().reset(*args, **kwargs)
 
-        self.best = (self.eff, self.struct)
+        self.best = (self.eff, self.struct.copy())
 
         return ret
 

@@ -34,12 +34,10 @@ class DeflectorBase(gym.Env):
     def get_efficiency(self, struct: np.array) -> float:
         raise NotImplementedError
 
-    def flip(self, struct, pos):
+    def flip(self, pos):
         if 0 <= pos <= (self.n_cells - 1):
-            struct[pos] = 1 if struct[pos] == -1 else -1
+            self.struct[pos] = 1 if self.struct[pos] == -1 else -1
         else:
             # if out of boundary, do nothing
             # the agent will learn the boundary
             pass
-
-        return struct

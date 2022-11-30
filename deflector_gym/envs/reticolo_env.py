@@ -72,16 +72,16 @@ class ReticoloIndex(MatlabBase):
         self.struct = self.initialize_struct()
         self.eff = self.get_efficiency(self.struct)
 
-        return self.struct  # for 1 channel
+        return self.struct.copy()  # for 1 channel
 
     def step(self, action):
         prev_eff = self.eff
 
-        self.struct = self.flip(self.struct, action)
+        self.flip(action)
         self.eff = self.get_efficiency(self.struct)
 
         reward = self.eff - prev_eff
 
         # unsqueeze for 1 channel
-        return self.struct, reward, False, {}
+        return self.struct.copy(), reward, False, {}
 

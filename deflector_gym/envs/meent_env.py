@@ -60,19 +60,18 @@ class MeentIndex(MeentBase):
         self.struct = self.initialize_struct()
         self.eff = self.get_efficiency(self.struct)
 
-        return self.struct  # for 1 channel
+        return self.struct.copy()
 
     def step(self, action):
-        # TODO: define done condition
         prev_eff = self.eff
 
-        self.struct = self.flip(self.struct, action)
+        self.flip(action)
         self.eff = self.get_efficiency(self.struct)
 
         reward = self.eff - prev_eff
 
         # unsqueeze for 1 channel
-        return self.struct, reward, False, {}
+        return self.struct.copy(), reward, False, {}
 
 
 def initialize_agent(initial_pos, n_cells):
@@ -126,7 +125,8 @@ class MeentAction1D2(MeentBase):
         # left == -1, noop == 0, right == 1
         # this way we can directly use ac as index difference
         ac -= 1
-        self.struct = self.flip(self.struct, self.pos + ac)
+
+        self.flip(self.pos + ac)
         self.eff = self.get_efficiency(self.struct)
 
         reward = self.eff - prev_eff
