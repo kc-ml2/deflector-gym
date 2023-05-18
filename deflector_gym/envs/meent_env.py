@@ -10,17 +10,25 @@ from .actions import Action1D2, Action1D4
 
 class MeentBase(DeflectorBase):
     def __init__(
-            self,
-            n_cells=256,
-            wavelength=1100,
-            desired_angle=70,
-            order=40,
-            thickness=325,
+        self,
+        n_cells=256,
+        wavelength=1100,
+        desired_angle=70,
+        order=40,
+        thickness=325,
+        alpha=0.05,
+        mfs=1 # minimum feature size
     ):
         super().__init__(n_cells, wavelength, desired_angle, order, thickness)
+        self.alpha = 0.05
+        self.mfs = mfs
 
     def get_efficiency(self, struct):
         # struct [1, -1, 1, 1, ...]
+        penalty = 0.0
+        if self.mfs > 1:
+            penalty = underMFS(struct, self.mfs) * self.alpha
+     
         struct = struct[np.newaxis, np.newaxis, :]
 
         wls = np.array([self.wavelength])
@@ -35,8 +43,25 @@ class MeentBase(DeflectorBase):
 
         eff, _, _ = calc.reproduce_acs_cell('p_si__real', 1)
 
-        return eff
+        return eff - penalty
 
+    def badcell(img, mfs):
+        img = np.array(img)
+        len = img.size
+        sz = mfs+2
+        window = np.ones(sz)
+        window[0] = -1
+        window[-1] = -1
+        imgextend = np.concatenate((img, img))
+        volved = np.convolve(imgextend, window)
+        output = volved[sz-1:len+sz-1]
+    return np.sum(np.floor(np.abs(output/sz)))
+
+    def underMFS(img, mfs):
+        num = 0
+        for i in range(1,mfs):
+            num += badcell(img, i)
+        return num
 
 class MeentIndex(MeentBase):
     def __init__(
