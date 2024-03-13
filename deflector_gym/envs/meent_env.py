@@ -55,7 +55,8 @@ class MeentBase(DeflectorBase):
         imgextend = np.concatenate((img, img))
         volved = np.convolve(imgextend, window)
         output = volved[sz-1:len+sz-1]
-    return np.sum(np.floor(np.abs(output/sz)))
+
+        return np.sum(np.floor(np.abs(output/sz)))
 
     def underMFS(img, mfs):
         num = 0
