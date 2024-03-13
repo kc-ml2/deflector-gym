@@ -7,6 +7,24 @@ from JLAB.solver import JLABCode
 from .base import DeflectorBase
 from .actions import Action1D2, Action1D4
 
+def badcell(img, mfs):
+    img = np.array(img)
+    len = img.size
+    sz = mfs+2
+    window = np.ones(sz)
+    window[0] = -1
+    window[-1] = -1
+    imgextend = np.concatenate((img, img))
+    volved = np.convolve(imgextend, window)
+    output = volved[sz-1:len+sz-1]
+
+    return np.sum(np.floor(np.abs(output/sz)))
+
+def underMFS(img, mfs):
+    num = 0
+    for i in range(1,mfs):
+        num += badcell(img, i)
+    return num
 
 class MeentBase(DeflectorBase):
     def __init__(
@@ -45,24 +63,6 @@ class MeentBase(DeflectorBase):
 
         return eff - penalty
 
-    def badcell(img, mfs):
-        img = np.array(img)
-        len = img.size
-        sz = mfs+2
-        window = np.ones(sz)
-        window[0] = -1
-        window[-1] = -1
-        imgextend = np.concatenate((img, img))
-        volved = np.convolve(imgextend, window)
-        output = volved[sz-1:len+sz-1]
-
-        return np.sum(np.floor(np.abs(output/sz)))
-
-    def underMFS(img, mfs):
-        num = 0
-        for i in range(1,mfs):
-            num += badcell(img, i)
-        return num
 
 class MeentIndex(MeentBase):
     def __init__(
