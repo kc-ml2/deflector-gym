@@ -1,5 +1,5 @@
 import numpy as np
-import gym
+import gymnasium as gym
 
 from .utils import random_bunch_init
 
