@@ -6,6 +6,8 @@ import numpy as np
 from .meent_utils import get_efficiency, get_field
 from .constants import AIR, SILICON
 
+from threadpoolctl import threadpool_limits, ThreadpoolController
+controller = ThreadpoolController()
 
 def badcell(img, mfs):
     img = np.array(img)
@@ -55,6 +57,7 @@ class MeentIndexEfield(gym.Env):
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(2, 256, 256), dtype=np.float32) # fix shape
         self.action_space = gym.spaces.Discrete(n_cells)
 
+    @controller.wrap(limits=1)
     def reset(self, seed, options):
         self.struct = self.init_func(self.n_cells)
         _, field = get_field(self.struct,
@@ -70,6 +73,7 @@ class MeentIndexEfield(gym.Env):
 
         return field, info
 
+    @controller.wrap(limits=1)
     def step(self, action):
         info = {}
 
