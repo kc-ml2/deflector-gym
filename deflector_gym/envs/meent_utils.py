@@ -120,4 +120,4 @@ def get_efficiency(
     # else:
     #     raise ValueError
 
-    return de_ti_interest
+    return float(de_ti_interest)

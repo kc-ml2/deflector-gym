@@ -57,8 +57,10 @@ class MeentIndexEfield(gym.Env):
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(2, 256, 256), dtype=np.float32) # fix shape
         self.action_space = gym.spaces.Discrete(n_cells)
 
-    @controller.wrap(limits=1)
+    @controller.wrap(limits=4)
     def reset(self, seed, options):
+        info = {}
+        
         self.struct = self.init_func(self.n_cells)
         _, field = get_field(self.struct,
             wavelength=self.wavelength,
@@ -68,12 +70,20 @@ class MeentIndexEfield(gym.Env):
         )
         field = np.stack([field.real, field.imag])
 
-        info = {}
+        self.eff = get_efficiency(
+            self.struct,
+            wavelength=self.wavelength,
+            deflected_angle=self.desired_angle,
+            fourier_order=self.order
+        )
+
+        if self.eff > self.max_eff:
+            self.max_eff = self.eff
         info['max_eff'] = self.max_eff
 
         return field, info
 
-    @controller.wrap(limits=1)
+    @controller.wrap(limits=4)
     def step(self, action):
         info = {}
 
@@ -99,7 +109,7 @@ class MeentIndexEfield(gym.Env):
         delta_eff = self.prev_eff - self.eff
         self.prev_eff = self.eff 
 
-        info['max_eff'] = float(self.max_eff)
+        info['max_eff'] = self.max_eff
 
         return field, delta_eff, False, False, info
 
