@@ -11,6 +11,7 @@ setup(
         'gymnasium',
         'meent',
         'tqdm',
+        'threadpoolctl',
     ],
     python_requires='>=3.10'
 )
