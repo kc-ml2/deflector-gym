@@ -106,7 +106,7 @@ class MeentIndexEfield(gym.Env):
         if self.eff > self.max_eff:
             self.max_eff = self.eff
 
-        delta_eff = self.prev_eff - self.eff
+        delta_eff = self.eff - self.prev_eff
         self.prev_eff = self.eff 
 
         info['max_eff'] = self.max_eff
