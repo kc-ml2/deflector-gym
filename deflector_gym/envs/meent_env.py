@@ -6,7 +6,7 @@ import numpy as np
 from .meent_utils import get_efficiency, get_field
 from .constants import AIR, SILICON
 
-from threadpoolctl import threadpool_limits, ThreadpoolController
+from threadpoolctl import ThreadpoolController
 controller = ThreadpoolController()
 
 def badcell(img, mfs):
@@ -107,10 +107,102 @@ class MeentIndexEfield(gym.Env):
             self.max_eff = self.eff
         info['max_eff'] = self.max_eff
 
-        delta_eff = self.eff - self.prev_eff
-        self.prev_eff = self.eff 
+        # delta_eff = self.eff - self.prev_eff
+        # self.prev_eff = self.eff 
 
-        return field, delta_eff, False, False, info
+        return field, float(self.eff), False, False, info
+
+    def render(self, mode='human'):
+        pass
+
+    def flip(self, action):
+        self.struct[action] = -self.struct[action]
+        # self.struct[action] = AIR if self.struct[action] == SILICON else SILICON
+
+
+class MeentIndex(gym.Env):
+    def __init__(
+        self,
+        n_cells=256,
+        init_func=np.ones,
+        wavelength=1100,
+        desired_angle=70,
+        order=40,
+        thickness=325,
+        field_res=(256, 1, 32),
+        mfs=1 # minimum feature size
+    ):
+        super().__init__()
+        
+        self.n_cells = n_cells
+        self.init_func = init_func
+        self.wavelength = wavelength
+        self.desired_angle = desired_angle
+        self.order = order
+        self.thickness = thickness
+        self.field_res = field_res
+        self.mfs = mfs
+
+        self.max_eff = 0.
+        self.prev_eff = 0.
+        self.eff = 0.
+        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(2, 256, 256), dtype=np.float32) # fix shape
+        self.action_space = gym.spaces.Discrete(n_cells)
+
+    @controller.wrap(limits=4)
+    def reset(self, seed, options):
+        info = {}
+        
+        self.struct = self.init_func(self.n_cells)
+        _, field = get_field(self.struct,
+            wavelength=self.wavelength,
+            deflected_angle=self.desired_angle,
+            fourier_order=self.order,
+            field_res=self.field_res
+        )
+        field = np.stack([field.real, field.imag])
+
+        self.eff = get_efficiency(
+            self.struct,
+            wavelength=self.wavelength,
+            deflected_angle=self.desired_angle,
+            fourier_order=self.order
+        )
+
+        if self.eff > self.max_eff:
+            self.max_eff = self.eff
+        info['max_eff'] = self.max_eff
+
+        return field, info
+
+    @controller.wrap(limits=4)
+    def step(self, action):
+        info = {}
+
+        self.flip(action)
+
+        _, field = get_field(self.struct,
+            wavelength=self.wavelength,
+            deflected_angle=self.desired_angle,
+            fourier_order=self.order,
+            field_res=self.field_res
+        )
+        field = np.stack([field.real, field.imag])
+
+        self.eff = get_efficiency(
+            self.struct,
+            wavelength=self.wavelength,
+            deflected_angle=self.desired_angle,
+            fourier_order=self.order
+        )
+        if self.eff > self.max_eff:
+            self.max_eff = self.eff
+        info['max_eff'] = self.max_eff
+
+        # delta_eff = self.eff - self.prev_eff
+        # self.prev_eff = self.eff 
+
+        return field, float(self.eff), False, False, info
 
     def render(self, mode='human'):
         pass
