@@ -25,7 +25,6 @@ def get_field(
     n_ridge = 'p_si__real'
     n_groove = 1
     wavelength = np.array([wavelength])
-    grating_type = 0
     thickness = [325] * 8
 
     if type(n_ridge) is str:
@@ -45,21 +44,13 @@ def get_field(
         ucell=ucell_new
     )
     # Calculate field distribution: OLD
-    de_ri, de_ti, field_cell = mee.conv_solve_field(
+    _, _, field_cell = mee.conv_solve_field(
         res_x=field_res[0], res_y=field_res[1], res_z=field_res[2],
     )
-    if grating_type == 0:
-        center = de_ti.shape[0] // 2
-        de_ri_cut = de_ri[center - 1:center + 2]
-        de_ti_cut = de_ti[center - 1:center + 2]
-    else:
-        x_c, y_c = np.array(de_ti.shape) // 2
-        de_ri_cut = de_ri[x_c - 1:x_c + 2, y_c - 1:y_c + 2]
-        de_ti_cut = de_ti[x_c - 1:x_c + 2, y_c - 1:y_c + 2]
 
     field_ex = np.flipud(field_cell[:, 0, :, 1])
 
-    return de_ti_cut, field_ex
+    return field_ex
 
 
 def get_efficiency(
@@ -89,35 +80,15 @@ def get_efficiency(
         thickness=thickness,
         ucell=ucell
     )
-    de_ri, de_ti = mee.conv_solve()
-    rayleigh_r = mee.rayleigh_r
-    rayleigh_t = mee.rayleigh_t
-
+    _, de_ti = mee.conv_solve()
+    
     # diffraction efficiency
     if grating_type == 0:
         center = de_ti.shape[0] // 2
-        de_ri_cut = de_ri[center - 1:center + 2]
-        de_ti_cut = de_ti[center - 1:center + 2]
         de_ti_interest = de_ti[center+1]
 
     else:
         x_c, y_c = np.array(de_ti.shape) // 2
-        de_ri_cut = de_ri[x_c - 1:x_c + 2, y_c - 1:y_c + 2]
-        de_ti_cut = de_ti[x_c - 1:x_c + 2, y_c - 1:y_c + 2]
         de_ti_interest = de_ti[x_c+1, y_c]
-
-    # data for neural operator experiment
-    # W, V, q = mee.neuralop_data[0]
-    # if grating_type == 0:
-    #     [W], [V], [q] = W, V, q
-
-    # elif grating_type == 1:
-    #     [W_1, W_2], [V_11, V_12, V_21, V_22], [q_1, q_2] = W, V, q
-
-    # elif grating_type == 2:
-    #     [W_11, W_12, W_21, W_22], [V_11, V_12, V_21, V_22], [q] = W, V, q
-
-    # else:
-    #     raise ValueError
 
     return float(de_ti_interest)
