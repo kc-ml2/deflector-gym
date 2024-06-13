@@ -1,0 +1,2 @@
+AIR = -1
+SILICON = 1

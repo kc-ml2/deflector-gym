@@ -8,9 +8,10 @@ setup(
     author_email='anthony@kc-ml2.com',
     packages=find_packages(),
     install_requires=[
-        'gym<0.25',
-        'meent==0.3.8',
+        'gymnasium',
+        'meent',
         'tqdm',
+        'threadpoolctl',
     ],
-    python_requires='>=3.8'
+    python_requires='>=3.10'
 )

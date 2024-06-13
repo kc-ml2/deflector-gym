@@ -1,11 +1,18 @@
+import os
+# os.environ['OMP_NUM_THREADS'] = "2"
+# os.environ['OPENBLAS_NUM_THREADS'] = "2"
+
 from functools import partial
 
-import gym
+import gymnasium as gym
 import numpy as np
 
-from JLAB.solver import JLABCode
-from .base import DeflectorBase
-from .actions import Action1D2, Action1D4
+from .meent_utils import get_efficiency, get_field
+from .constants import AIR, SILICON
+
+from threadpoolctl import ThreadpoolController
+controller = ThreadpoolController()
+
 
 def badcell(img, mfs):
     img = np.array(img)
@@ -20,193 +27,157 @@ def badcell(img, mfs):
 
     return np.sum(np.floor(np.abs(output/sz)))
 
+
 def underMFS(img, mfs):
     num = 0
     for i in range(1,mfs):
         num += badcell(img, i)
     return num
 
-class MeentBase(DeflectorBase):
+
+class MeentIndexEfield(gym.Env):
     def __init__(
         self,
         n_cells=256,
+        init_func=np.ones,
         wavelength=1100,
         desired_angle=70,
         order=40,
         thickness=325,
-        alpha=0.05,
-        mfs=1 # minimum feature size
+        field_res=(256, 1, 32),
+        mfs=1, # minimum feature size
+        obs_type='efield', # 'efield' or 'struct'
+        rew_type = 'eff' # 'eff' or 'delta_eff'
     ):
-        super().__init__(n_cells, wavelength, desired_angle, order, thickness)
-        self.alpha = 0.05
+        super().__init__()
+        
+        self.n_cells = n_cells
+        self.init_func = init_func
+        self.wavelength = wavelength
+        self.desired_angle = desired_angle
+        self.order = order
+        self.thickness = thickness
+        self.field_res = field_res
         self.mfs = mfs
+        self.obs_type = obs_type
+        self.rew_type = rew_type
 
-    def get_efficiency(self, struct):
-        # struct [1, -1, 1, 1, ...]
-        penalty = 0.0
-        if self.mfs > 1:
-            penalty = underMFS(struct, self.mfs) * self.alpha
-     
-        struct = struct[np.newaxis, np.newaxis, :]
+        self.max_eff = 0.
+        self.prev_eff = 0.
+        self.eff = 0.
 
-        wls = np.array([self.wavelength])
-        period = abs(wls / np.sin(self.desired_angle / 180 * np.pi))
-        calc = JLABCode(
-            grating_type=0,
-            n_I=1.45, n_II=1., theta=0, phi=0.,
-            fourier_order=self.order, period=period,
-            wls=wls, pol=1,
-            patterns=None, ucell=struct, thickness=np.array([self.thickness])
-        )
-
-        eff, _, _ = calc.reproduce_acs_cell('p_si__real', 1)
-
-        return eff - penalty
-
-
-class MeentIndex(MeentBase):
-    def __init__(
-            self,
-            n_cells=256,
-            wavelength=1100,
-            desired_angle=70,
-            *args,
-            **kwargs
-    ):
-        super().__init__(n_cells, wavelength, desired_angle, *args, **kwargs)
-
-        self.observation_space = gym.spaces.Box(
-            low=-1., high=1.,
-            shape=(n_cells,), #### TODO fix shape
-            dtype=np.float64
-        )
+        if obs_type == 'efield':
+            self.observation_space = gym.spaces.Box(
+                low=-np.inf, high=np.inf, 
+                shape=(2, 256, 256), 
+                dtype=np.float32
+            )
+        elif obs_type == 'struct':
+            self.observation_space = gym.spaces.Box(
+                low=-1., high=1.,
+                shape=(1, n_cells),
+                dtype=np.float32
+            )
+        else:
+            raise NotImplementedError
+        
         self.action_space = gym.spaces.Discrete(n_cells)
 
-    def reset(self):
-        self.struct = self.initialize_struct()
-        self.eff = self.get_efficiency(self.struct)
+    @controller.wrap(limits=4)
+    def reset(self, seed=42, options={}):
+        info = {}
+        
+        self.struct = self.init_func(self.n_cells)
+<<<<<<< HEAD
+        if self.obs_type == 'efield':
+            field = get_field(self.struct,
+                wavelength=self.wavelength,
+                deflected_angle=self.desired_angle,
+                fourier_order=self.order,
+                field_res=self.field_res
+            )
+            obs = np.stack([field.real, field.imag])
+        elif self.obs_type == 'struct':
+            obs = self.struct.copy()[np.newaxis]
+        else:
+            raise NotImplementedError
+=======
+        _, field = get_field(self.struct,
+            wavelength=self.wavelength,
+            deflected_angle=self.desired_angle,
+            fourier_order=self.order,
+            field_res=self.field_res
+        )
+        field = np.stack([field.real, field.imag])
+        
+        self.eff = get_efficiency(
+            self.struct,
+            wavelength=self.wavelength,
+            deflected_angle=self.desired_angle,
+            fourier_order=self.order
+        )
+        if self.eff > self.max_eff:
+            self.max_eff = self.eff
+>>>>>>> ecb8a394f40569edffaeeb20657b78e0b10683f7
 
-        return self.struct.copy()
+        self.eff = get_efficiency(
+            self.struct,
+            wavelength=self.wavelength,
+            deflected_angle=self.desired_angle,
+            fourier_order=self.order
+        )
 
+        if self.eff > self.max_eff:
+            self.max_eff = self.eff
+        info['max_eff'] = self.max_eff
+
+        return obs, info
+
+    @controller.wrap(limits=4)
     def step(self, action):
-        prev_eff = self.eff
+        info = {}
 
         self.flip(action)
-        self.eff = self.get_efficiency(self.struct)
+        if self.obs_type == 'efield':
+            field = get_field(self.struct,
+                wavelength=self.wavelength,
+                deflected_angle=self.desired_angle,
+                fourier_order=self.order,
+                field_res=self.field_res
+            )
+            obs = np.stack([field.real, field.imag])
+        elif self.obs_type == 'struct':
+            obs = self.struct.copy()[np.newaxis]
+        else:
+            raise NotImplementedError
 
-        reward = self.eff - prev_eff
-
-        # unsqueeze for 1 channel
-        return self.struct.copy(), reward, False, {}
-
-
-def initialize_agent(initial_pos, n_cells):
-    # initialize agent
-    if initial_pos == 'center':
-        pos = n_cells // 2
-    elif initial_pos == 'right_edge':
-        pos = n_cells - 1
-    elif initial_pos == 'left_edge':
-        pos = 0
-    elif initial_pos == 'random':
-        pos = np.random.randint(n_cells)
-    else:
-        raise RuntimeError('Undefined inital position')
-
-    return pos
-
-
-class MeentAction1D2(MeentBase):
-    def __init__(
-            self,
-            n_cells=256,
-            wavelength=1100,
-            desired_angle=70,
-            initial_pos='center',  # initial agent's position
-            *args,
-            **kwargs
-    ):
-        super().__init__(n_cells, wavelength, desired_angle)
-
-        self.observation_space = gym.spaces.Box(
-            low=-1., high=1.,
-            shape=(2*n_cells,),
-            dtype=np.float64
+        self.eff = get_efficiency(
+            self.struct,
+            wavelength=self.wavelength,
+            deflected_angle=self.desired_angle,
+            fourier_order=self.order
         )
-        self.action_space = gym.spaces.Discrete(len(Action1D2)) # start=-1
-        self.initial_pos = initial_pos
-        self.onehot = np.eye(n_cells)
+        if self.eff > self.max_eff:
+            self.max_eff = self.eff
+<<<<<<< HEAD
+=======
 
-    def reset(self):
-        # initialize structure
+        delta_eff = self.eff - self.prev_eff
+        self.prev_eff = self.eff 
 
-        self.struct = self.initialize_struct()
-        self.eff = self.get_efficiency(self.struct)
-        self.pos = initialize_agent(self.initial_pos, self.n_cells)
+>>>>>>> ecb8a394f40569edffaeeb20657b78e0b10683f7
+        info['max_eff'] = self.max_eff
 
-        return np.concatenate((self.struct, self.onehot[self.pos]))
+        if self.rew_type == 'eff':
+            rew = float(self.eff)
+        elif self.rew_type == 'delta_eff':
+            rew = float(self.eff - self.prev_eff)
+        
+        return obs, rew, False, False, info
 
-    def step(self, ac):
-        prev_eff = self.eff
-        # left == -1, noop == 0, right == 1
-        # this way we can directly use ac as index difference
-        ac -= 1
+    def render(self, mode='human'):
+        pass
 
-        self.flip(self.pos + ac)
-        self.eff = self.get_efficiency(self.struct)
-
-        reward = self.eff - prev_eff
-
-        return np.concatenate((self.struct, self.onehot[self.pos])), reward, False, {}
-
-class MeentAction1D4(MeentBase):
-    def __init__(
-            self,
-            n_cells=256,
-            wavelength=1100,
-            desired_angle=70,
-            initial_pos='center',  # initial agent's position
-            *args,
-            **kwargs
-    ):
-        super().__init__(n_cells, wavelength, desired_angle)
-
-        self.observation_space = gym.spaces.Box(
-            low=-1., high=1.,
-            shape=(2*n_cells,),
-            dtype=np.float64
-        )
-        self.action_space = gym.spaces.Discrete(len(Action1D4))
-        self.initial_pos = initial_pos
-        self.onehot = np.eye(n_cells)
-
-    def reset(self):
-        # initialize structure
-
-        self.struct = self.initialize_struct(n_cells=self.n_cells)
-        self.eff = self.get_efficiency(self.struct)
-        self.pos = initialize_agent(self.initial_pos, self.n_cells)
-
-        return np.concatenate((self.struct, self.onehot[self.pos]))
-
-    def step(self, ac):
-        prev_eff = self.eff
-
-        if ac == Action1D4.RIGHT_SI.value and self.pos + 1 < self.n_cells:
-            self.pos += 1
-            self.struct[self.pos] = 1
-        elif ac == Action1D4.RIGHT_AIR.value and self.pos + 1 < self.n_cells:
-            self.pos += 1
-            self.struct[self.pos] = -1
-        elif ac == Action1D4.LEFT_SI.value and 0 <= self.pos - 1:
-            self.pos -= 1
-            self.struct[self.pos] = 1
-        elif ac == Action1D4.LEFT_AIR.value and 0 <= self.pos - 1:
-            self.pos -= 1
-            self.struct[self.pos] = -1
-
-        self.eff = self.get_efficiency(self.struct)
-
-        reward = self.eff - prev_eff
-
-        return np.concatenate((self.struct, self.onehot[self.pos])), reward, False, {}
+    def flip(self, action):
+        self.struct[action] = -self.struct[action]
+        # self.struct[action] = AIR if self.struct[action] == SILICON else SILICON
