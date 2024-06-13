@@ -1,3 +1,7 @@
+import os
+# os.environ['OMP_NUM_THREADS'] = "2"
+# os.environ['OPENBLAS_NUM_THREADS'] = "2"
+
 from functools import partial
 
 import gymnasium as gym
@@ -84,6 +88,7 @@ class MeentIndexEfield(gym.Env):
         info = {}
         
         self.struct = self.init_func(self.n_cells)
+<<<<<<< HEAD
         if self.obs_type == 'efield':
             field = get_field(self.struct,
                 wavelength=self.wavelength,
@@ -96,6 +101,24 @@ class MeentIndexEfield(gym.Env):
             obs = self.struct.copy()[np.newaxis]
         else:
             raise NotImplementedError
+=======
+        _, field = get_field(self.struct,
+            wavelength=self.wavelength,
+            deflected_angle=self.desired_angle,
+            fourier_order=self.order,
+            field_res=self.field_res
+        )
+        field = np.stack([field.real, field.imag])
+        
+        self.eff = get_efficiency(
+            self.struct,
+            wavelength=self.wavelength,
+            deflected_angle=self.desired_angle,
+            fourier_order=self.order
+        )
+        if self.eff > self.max_eff:
+            self.max_eff = self.eff
+>>>>>>> ecb8a394f40569edffaeeb20657b78e0b10683f7
 
         self.eff = get_efficiency(
             self.struct,
@@ -136,6 +159,13 @@ class MeentIndexEfield(gym.Env):
         )
         if self.eff > self.max_eff:
             self.max_eff = self.eff
+<<<<<<< HEAD
+=======
+
+        delta_eff = self.eff - self.prev_eff
+        self.prev_eff = self.eff 
+
+>>>>>>> ecb8a394f40569edffaeeb20657b78e0b10683f7
         info['max_eff'] = self.max_eff
 
         if self.rew_type == 'eff':
