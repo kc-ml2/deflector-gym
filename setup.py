@@ -8,7 +8,7 @@ setup(
     author_email='anthony@kc-ml2.com',
     packages=find_packages(),
     install_requires=[
-        'gym<0.25'
+        'gym<0.25',
         'gymnasium',
         'meent',
         'tqdm',
